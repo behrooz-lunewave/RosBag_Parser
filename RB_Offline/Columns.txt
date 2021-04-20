@@ -1,0 +1,65 @@
+
+Radar
+====================================
+1. 	FrameID
+2. 	PacketID
+3. 	x
+4. 	y
+5. 	z 
+6. 	r
+7. 	azimuth
+8. 	elev
+9. 	rcs
+10. 	velocity
+11. 	rang_indx
+12. 	thetha_indx
+13. 	elev_indx
+14. 	vel_indx
+15. 	amp_indx
+16. 	timestamp
+17. 	temp
+
+where:
+  float r = sqrt((x* x) + (y * y));
+  float azimuth = 90 + (atan2(y,x)* (180 / PI));
+  float elev = atan2(z,r);
+
+
+
+
+
+Lidar
+==============================
+1. 	x
+2. 	y
+3. 	z
+4. 	intensity
+5. 	timestamp
+6. 	ring
+
+
+IMU
+=================================
+ 1.	imu->header.timestamp;
+ 2.	imu->orientation.w;
+ 3.	imu->orientation.x;
+ 4.	imu->orientation.y;
+ 5.	imu->orientation.z;
+ 6. 	imu->angular_velocity.x ;
+ 7. 	imu->angular_velocity.y ;
+ 8. 	imu->angular_velocity.z ;
+ 9. 	imu->linear_acceleration.x ;
+10.	imu->linear_acceleration.y ;
+11. 	imu->linear_acceleration.z ;
+
+
+
+GPS
+=================================
+1. 	gps->header.stamp;
+2. 	gps->latitude ;
+3. 	gps->longitude;
+4. 	gps->altitude;
+
+
+
