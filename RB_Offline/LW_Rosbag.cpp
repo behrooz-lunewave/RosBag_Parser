@@ -31,6 +31,8 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/Imu.h>
+#include <sensor_msgs/NavSatFix.h>
+
 #include <boost/foreach.hpp>
 #include <std_msgs/Int32.h>
 #include <std_msgs/String.h>
@@ -40,7 +42,7 @@
 
 #define foreach BOOST_FOREACH
 #define PI 3.14159265
-#define BUILD_ID  1004.5
+#define BUILD_ID  1008
 
 using namespace std;
 using namespace cv;
@@ -102,9 +104,9 @@ int  Concat(string bag_file, int i)
 	string camera_dest_3 = bag_file + "_Camera_3";
 
 
-        cv::Mat cam_1 = cv::imread( camera_dest_1 +"/" + std::to_string(i) + "_.png", cv::IMREAD_COLOR);
-        cv::Mat cam_2 = cv::imread( camera_dest_2 +"/"+ std::to_string(i) + "_.png", cv::IMREAD_COLOR);
-        cv::Mat cam_3 = cv::imread( camera_dest_3 +"/"+ std::to_string(i) + "_.png", cv::IMREAD_COLOR);
+        cv::Mat cam_1 = cv::imread( camera_dest_1 +"/" + std::to_string(i) + "_.jpg", cv::IMREAD_COLOR);
+        cv::Mat cam_2 = cv::imread( camera_dest_2 +"/"+ std::to_string(i) + "_.jpg", cv::IMREAD_COLOR);
+        cv::Mat cam_3 = cv::imread( camera_dest_3 +"/"+ std::to_string(i) + "_.jpg", cv::IMREAD_COLOR);
         cv::Mat cam_12, cam;
 
         int image_width = 648;
@@ -117,6 +119,11 @@ int  Concat(string bag_file, int i)
 
         cv::Mat cam_1_crop;
         cv::Mat cam_3_crop;
+		
+		if((cam_1.size().height  == 0) ||  (cam_1.size().width  == 0) ||  (cam_3.size().height  == 0) ||  (cam_3.size().width  == 0))
+        {
+			return -1;
+		}
 
         imageCrop(cam_1, cam_1_crop, offset_left_x, offset_left_y, 0);    // crop right side image
         imageCrop(cam_3, cam_3_crop, offset_right_x, offset_right_y, 1);  // crop left side image
@@ -130,7 +137,7 @@ int  Concat(string bag_file, int i)
 	   
 	   	try
 		{		
-				cv::imwrite(  bag_file + "_Camera/concat _" + std::to_string(i) + ".png",  cam);
+				cv::imwrite(  bag_file + "_Camera/concat _" + std::to_string(i) + ".jpg",  cam);
 		}			
 		catch(const cv::Exception& ex)
 		{
@@ -149,7 +156,9 @@ char lidar_buffer[1024*1024*64];
 
 int main (int argc, char **argv) 
 { 
-    glob_t globbuf;
+    int min =0;
+	int old_min = 0;
+	glob_t globbuf;
 	ros::Time::init();
 	vector<string> fileList;
 	
@@ -225,7 +234,7 @@ int main (int argc, char **argv)
 	   bag_topics.push_back(std::string("/camera/cam_2"));
 	   bag_topics.push_back(std::string("/camera/cam_3"));
 	   bag_topics.push_back(std::string("/IMU"));
-	   //bag_topics.push_back(std::string("/GPS"));
+	   bag_topics.push_back(std::string("/GPS"));
 	  
 	   
 	rosbag::View view(bag, rosbag::TopicQuery(bag_topics));
@@ -249,7 +258,7 @@ int main (int argc, char **argv)
 		string camera_dest_2 = bag_wthExtDir+ "_Camera_2";
 		string camera_dest_3 = bag_wthExtDir + "_Camera_3";
 		string camera_dest = bag_wthExtDir + "_Camera";
-		//string GPS_dest = bag_wthExtDir + "_GPS";
+		string GPS_dest = bag_wthExtDir + "_GPS";
 		string IMU_dest = bag_wthExtDir + "_IMU";
 		 
 		 mkdir( (radar_dest).c_str() , 0777);
@@ -259,7 +268,7 @@ int main (int argc, char **argv)
 		 mkdir( (camera_dest_2).c_str() , 0777);
 		 mkdir( (camera_dest_3 ).c_str() , 0777);
 		 mkdir( (camera_dest ).c_str() , 0777);
-		 //mkdir( (GPS_dest ).c_str() , 0777);
+		 mkdir( (GPS_dest ).c_str() , 0777);
 		 mkdir( (IMU_dest ).c_str() , 0777);
 		   
 		 string radar_dir =  "./" + radar_dest;
@@ -269,7 +278,7 @@ int main (int argc, char **argv)
 		string camera_dir_2 = "./" + camera_dest_2;
 		string camera_dir_3 = "./" + camera_dest_3;
 		string camera_dir = "./" + camera_dest;
-		//string GPS_dir = "./" + GPS_dest;
+		string GPS_dir = "./" + GPS_dest;
 		string IMU_dir = "./" +  IMU_dest;
 		
 		union Float xf,yf,zf;
@@ -283,6 +292,7 @@ int main (int argc, char **argv)
 		int imageFrameNum2 = 0; 
 		int imageFrameNum3 = 0; 
 		int imuFrameNum = 0; 
+		int gpsFrameNum = 0; 
 		
 		
 		   string meta_data_file_name = "./" +  radar_dest  + "_meta_data" + ".txt";
@@ -293,7 +303,7 @@ int main (int argc, char **argv)
 		   string cam1_timetag_file_name =  "./" +  camera_dest_1 + "_time_tag" + ".txt";
 		   string cam2_timetag_file_name =  "./" +  camera_dest_2 + "_time_tag" + ".txt";
 		   string cam3_timetag_file_name =  "./" +  camera_dest_3 + "_time_tag" + ".txt";
-		   //string GPS_timetag_file_name =  "/" +  GPS_dest  + "_time_tag" + ".txt";
+		   string GPS_timetag_file_name =  "./" +  GPS_dest  + "_time_tag" + ".txt";
 		   string  IMU_timetag_file_name =  "./" +  IMU_dest  + "_time_tag" + ".txt";
 		  
 		   cout<<radar_timetag_file_name<<endl;
@@ -306,11 +316,10 @@ int main (int argc, char **argv)
 		   ofstream lidar_timetag (lidar_timetag_file_name); 
 		   ofstream cam1_timetag (cam1_timetag_file_name); 
 		   ofstream cam2_timetag (cam2_timetag_file_name); 
-		   ofstream cam3_timetag (cam3_timetag_file_name); 
-		   //ofstream GPS_timetag (GPS_timetag_file_name); 
+		   ofstream cam3_timetag (cam3_timetag_file_name);    
 		   ofstream IMU_timetag (IMU_timetag_file_name); 
-		   
-		   //cout<<"here"<<endl;
+		   ofstream GPS_timetag (GPS_timetag_file_name); 
+		  
 		   
 		   radar_metadata<< "Mode" << " = " <<  detected_mode << endl;
 		   
@@ -318,7 +327,6 @@ int main (int argc, char **argv)
 		
      foreach (rosbag::MessageInstance const m, view)
     {
-                      //std::cout<< "Topic:  = "  << m.getTopic().c_str() << std::endl;
 					  
         if ( std::strcmp( m.getTopic().c_str(), "/radar") == 0)
         {
@@ -329,7 +337,7 @@ int main (int argc, char **argv)
 		   
 		   string radar_file_name =  radar_dir + "/" + std::to_string(radarFrameNum) + "_.txt";
 		   	  
-			     cout<< "radar_file_name: " << radar_file_name <<endl;
+			 cout<< "Radar Frame: " << radarFrameNum <<endl;
 		   ofstream radar_file (radar_file_name); 
 		   
 		  // cout<< "Timestamp: " << ptcld->header.stamp <<endl;
@@ -509,7 +517,7 @@ int main (int argc, char **argv)
 					compression_params.push_back(IMWRITE_JPEG_OPTIMIZE);
 					compression_params.push_back(9);
 					
-					string camera_file_name =   camera_dir_1 + "/" + std::to_string(imageFrameNum1) + "_.png";
+					string camera_file_name =   camera_dir_1 + "/" + std::to_string(imageFrameNum1) + "_.jpg";
 					
 					 cam1_timetag <<  imageFrameNum1<< "," << l_img->header.stamp <<endl;
 					
@@ -536,11 +544,6 @@ int main (int argc, char **argv)
 					
 					 imageFrameNum1++;
 					 
-					 if( imageFrameNum1%100 == 0)
-					 {
-						 cout<<endl;
-						 cout<< imageFrameNum1<< "  Frames of camera 1 is processed."<<endl;
-					 }
 		}	
 		else if ( std::strcmp( m.getTopic().c_str(), "/camera/cam_2") == 0)	
 		{
@@ -565,7 +568,7 @@ int main (int argc, char **argv)
 					compression_params.push_back(IMWRITE_JPEG_OPTIMIZE);
 					compression_params.push_back(9);
 					
-					string camera_file_name =   camera_dir_2 + "/" + std::to_string(imageFrameNum2) + "_.png";
+					string camera_file_name =   camera_dir_2 + "/" + std::to_string(imageFrameNum2) + "_.jpg";
 					
 					cam2_timetag <<  imageFrameNum2<< "," << l_img->header.stamp <<endl;
 					
@@ -591,12 +594,6 @@ int main (int argc, char **argv)
 					}
 					
 					 imageFrameNum2++;
-					 
-					 if( imageFrameNum2%100 == 0)
-					 {
-						 cout<<endl;
-						 cout<< imageFrameNum2<< "  Frames of camera 2 is processed."<<endl;
-					 }
 				
 		}
 		else if ( std::strcmp( m.getTopic().c_str(), "/camera/cam_3") == 0)	
@@ -622,7 +619,7 @@ int main (int argc, char **argv)
 					compression_params.push_back(IMWRITE_JPEG_OPTIMIZE);
 					compression_params.push_back(9);
 					
-					string camera_file_name =   camera_dir_3 + "/" + std::to_string(imageFrameNum3) + "_.png";
+					string camera_file_name =   camera_dir_3 + "/" + std::to_string(imageFrameNum3) + "_.jpg";
 					
 					cam3_timetag <<  imageFrameNum3<< "," << l_img->header.stamp <<endl;
 					
@@ -649,14 +646,9 @@ int main (int argc, char **argv)
 					
 					 imageFrameNum3++;
 					 
-					 if( imageFrameNum3%100 == 0)
-					 {
-						 cout<<endl;
-						 cout<< imageFrameNum3<< "  Frames of camera 3 is processed."<<endl;
-					 }
 				
 		}
-				else if ( std::strcmp( m.getTopic().c_str(), "/IMU") == 0)	
+		else if ( std::strcmp( m.getTopic().c_str(), "/IMU") == 0)	
 		{
 					sensor_msgs::Imu::ConstPtr   imu = m.instantiate<sensor_msgs::Imu>();
 						
@@ -681,19 +673,51 @@ int main (int argc, char **argv)
 					float jj = imu->linear_acceleration.z ;
 					
 					
-					IMU_file<<std::setprecision(5)<< tt <<","<< aa <<","<< bb <<","<< cc <<","<< dd <<","<< ee << "," << ff<< "," << gg <<"," << hh <<"," << ii << "," << jj <<endl;
+					IMU_file<<std::setprecision(7)<< tt <<","<< aa <<","<< bb <<","<< cc <<","<< dd <<","<< ee << "," << ff<< "," << gg <<"," << hh <<"," << ii << "," << jj <<endl;
 					
 					IMU_file.close();
 						
 					 imuFrameNum++;		
 				
 		}
+		else if ( std::strcmp( m.getTopic().c_str(), "/GPS") == 0)	
+		{
+			
+					sensor_msgs::NavSatFix::ConstPtr   gps = m.instantiate<sensor_msgs::NavSatFix>();
+						
+					string GPS_file_name =   GPS_dir + "/" + std::to_string(gpsFrameNum) + "_.txt";
+					
+					GPS_timetag <<  gpsFrameNum<< "," << gps->header.stamp <<endl;
+					
+					ofstream GPS_file (GPS_file_name);
+					
+					auto tt =  gps->header.stamp;
+				    float  lat = gps->latitude ;
+                    float  lon = gps->longitude;
+                    float alt = gps->altitude;
+    
+					
+					GPS_file<<std::setprecision(12)<< tt <<","<< lat<<","<< lon <<","<< alt<<endl;
+					
+					GPS_file.close();
+						
+					 gpsFrameNum++;		
+				
+		}
+		
 
+		
         if( (imageFrameNum1 > k )&& (imageFrameNum2 > k )&& (imageFrameNum3 > k))
 		{
-        Concat( 	bag_wthExtDir , k)	;
-		k++;
+        int ret = Concat( bag_wthExtDir , k)	;
+		
+		if(ret == 0)
+		{
+			k++;
 		}
+		
+		}
+		
 		
     }// foreach
 	
@@ -704,6 +728,7 @@ int main (int argc, char **argv)
 	cam2_timetag.close();
 	cam3_timetag.close();
 	IMU_timetag.close();
+	GPS_timetag.close();
 	
 	cout<< imageFrameNum1<< "  Frames of camera 1 is processed."<<endl;
 	cout<< imageFrameNum2<< "  Frames of camera 2 is processed."<<endl;
@@ -717,6 +742,31 @@ int main (int argc, char **argv)
     cout<< buffer2<<endl;
 
 bag.close();
+
+
+		 
+	 string cmd =  " rm -rf " + camera_dest_1;
+	 cout<<cmd<<endl;
+     system(cmd.c_str()); 
+	 
+	  cmd =  " rm -rf " + camera_dest_2;
+	 cout<<cmd<<endl;
+     system(cmd.c_str()); 
+	 
+	  cmd =  " rm -rf " + camera_dest_3;
+	 cout<<cmd<<endl;
+     system(cmd.c_str()); 
+
+
+     cmd =  " tar -cvf " +  bag_wthExt + ".tar  " +  bag_wthExt;
+	 cout<<cmd<<endl;
+     system(cmd.c_str());
+	 
+	 cmd = " rm -rf " +  bag_wthExt;
+	 cout<<cmd<<endl;
+     system(cmd.c_str());
+	 
+	 
 	}
 	 
 	 
