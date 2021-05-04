@@ -549,8 +549,24 @@ void callback_end(const ros::TimerEvent&)
 
 int main (int argc, char **argv) 
 { 
+	string detected_mode;
+	string bag_file;
 	
- 
+ 	vector<string> ModeSreach = { "64N","64F","128N","128F","256N","256F"};
+	
+	if(argc > 1)
+	{
+		bag_file =  string(argv[1]);	
+	}
+	
+	   for(int j = 0; j< ModeSreach.size();j++)
+	   {
+		   if (bag_file.find(ModeSreach[j]) != std::string::npos) 
+		   {
+					detected_mode = ModeSreach[j];
+					break;
+			}
+	   }
     ///// ROS Init ///////////////////////////////////////////////////////////////////  
     ros::init(argc, argv, "all_sub"); // node name: 
 	 
@@ -577,9 +593,9 @@ int main (int argc, char **argv)
     ////////////////////// Radar Start Block ////////////////////////////////////
 	
   float inpf;
-  if(argc> 1)
+  if(argc> 2)
  {		 
-      string inp(argv[1]);
+      string inp(argv[2]);
 	 // cout << inp<< endl;
 	  inpf = stof(inp);
 	 // cout << inpf<< endl;
@@ -597,6 +613,13 @@ int main (int argc, char **argv)
 		  ros::spinOnce();
 		  r.sleep();
 		}
+		
+		  ofstream radar_metadata (bag_file + "_meta_data.txt"); 
+		  
+		 radar_metadata<< "Mode" << " = " <<  detected_mode << endl;
+		   
+		   radar_metadata.close();
+		
 		
 		
 

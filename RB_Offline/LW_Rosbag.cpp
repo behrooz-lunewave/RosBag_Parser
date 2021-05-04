@@ -19,6 +19,7 @@
 #include <sys/stat.h> // stat
 #include <unistd.h>
 #include <glob.h>
+#include <filesystem>
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs/imgcodecs.hpp>
@@ -42,10 +43,11 @@
 
 #define foreach BOOST_FOREACH
 #define PI 3.14159265
-#define BUILD_ID  1008
+#define BUILD_ID  1012
 
 using namespace std;
 using namespace cv;
+using std::filesystem::current_path;
 
 
 char logBuf[128];
@@ -98,10 +100,10 @@ void imageCrop(cv::Mat &img, cv::Mat &img_crop, int offset_x, int offset_y, int 
 
 int  Concat(string bag_file, int i) 
 {
-	
-	string camera_dest_1= bag_file + "_Camera_1";
-	string camera_dest_2 = bag_file + "_Camera_2";
-	string camera_dest_3 = bag_file + "_Camera_3";
+
+	string camera_dest_1=  bag_file + "Camera_1";
+	string camera_dest_2 = bag_file + "Camera_2";
+	string camera_dest_3 = bag_file + "Camera_3";
 
 
         cv::Mat cam_1 = cv::imread( camera_dest_1 +"/" + std::to_string(i) + "_.jpg", cv::IMREAD_COLOR);
@@ -135,15 +137,16 @@ int  Concat(string bag_file, int i)
 
        // cv::imshow("All cameras", cam);
 	   
+
 	   	try
-		{		
-				cv::imwrite(  bag_file + "_Camera/concat _" + std::to_string(i) + ".jpg",  cam);
-		}			
+		{
+				cv::imwrite(  bag_file + "Camera/concat_" + std::to_string(i) + ".jpg",  cam);
+		}
 		catch(const cv::Exception& ex)
 		{
 				cout<< "Exception converting image to PNG  after concatanation  for image  " <<i<<"   "<<endl<< ex.what()<<endl;
 		}
-		
+
 
     return 0;
 
@@ -154,14 +157,15 @@ char radar_buffer[1024*1024];
 char radarBF_buffer[1024*1024];
 char lidar_buffer[1024*1024*64];
 
-int main (int argc, char **argv) 
-{ 
+int main (int argc, char **argv)
+{
     int min =0;
 	int old_min = 0;
 	glob_t globbuf;
 	ros::Time::init();
 	vector<string> fileList;
-	
+	vector<string> dest_fileList;
+
 	rosbag::Bag bag;
 	
 	vector<string> ModeSreach = { "64N","64F","128N","128F","256N","256F"};
@@ -235,32 +239,32 @@ int main (int argc, char **argv)
 	   bag_topics.push_back(std::string("/camera/cam_3"));
 	   bag_topics.push_back(std::string("/IMU"));
 	   bag_topics.push_back(std::string("/GPS"));
-	  
-	   
+
+
 	rosbag::View view(bag, rosbag::TopicQuery(bag_topics));
-   
-  
-	
+
+
+
 		//ros::Rate loop_rate(20);
-		
+
 		//int i =0;
-		
+
 		string bag_wthExt = bag_file.substr(0, bag_file.size() - 4);
-		
+
 		mkdir(bag_wthExt.c_str(), 0777);
-		
-		string bag_wthExtDir = bag_wthExt + "/" + bag_wthExt ;
-	
-		string radar_dest = bag_wthExtDir+ "_Radar";
-		string radar_bf_dest = bag_wthExtDir+ "_Radar_bf";
-		string lidar_dest = bag_wthExtDir + "_Lidar";
-		string camera_dest_1= bag_wthExtDir+ "_Camera_1";
-		string camera_dest_2 = bag_wthExtDir+ "_Camera_2";
-		string camera_dest_3 = bag_wthExtDir + "_Camera_3";
-		string camera_dest = bag_wthExtDir + "_Camera";
-		string GPS_dest = bag_wthExtDir + "_GPS";
-		string IMU_dest = bag_wthExtDir + "_IMU";
-		 
+
+		string bag_wthExtDir = bag_wthExt + "/" ;
+
+		string radar_dest = bag_wthExtDir+ "Radar";
+		string radar_bf_dest = bag_wthExtDir+ "Radar_bf";
+		string lidar_dest = bag_wthExtDir + "Lidar";
+		string camera_dest_1= bag_wthExtDir+ "Camera_1";
+		string camera_dest_2 = bag_wthExtDir+ "Camera_2";
+		string camera_dest_3 = bag_wthExtDir + "Camera_3";
+		string camera_dest = bag_wthExtDir + "Camera";
+		string GPS_dest = bag_wthExtDir + "GPS";
+		string IMU_dest = bag_wthExtDir + "IMU";
+
 		 mkdir( (radar_dest).c_str() , 0777);
 		 mkdir( (radar_bf_dest ).c_str() , 0777);
 		 mkdir( (lidar_dest ).c_str() , 0777);
@@ -280,7 +284,7 @@ int main (int argc, char **argv)
 		string camera_dir = "./" + camera_dest;
 		string GPS_dir = "./" + GPS_dest;
 		string IMU_dir = "./" +  IMU_dest;
-		
+
 		union Float xf,yf,zf;
 		union Double tD;
 		union Uint16 uRing;
@@ -288,15 +292,15 @@ int main (int argc, char **argv)
 		int radarFrameNum = 0;
 		int radar_bf_FrameNum = 0;
 		int lidarFrameNum = 0;
-		int imageFrameNum1 = 0; 
-		int imageFrameNum2 = 0; 
-		int imageFrameNum3 = 0; 
-		int imuFrameNum = 0; 
-		int gpsFrameNum = 0; 
-		
-		
+		int imageFrameNum1 = 0;
+		int imageFrameNum2 = 0;
+		int imageFrameNum3 = 0;
+		int imuFrameNum = 0;
+		int gpsFrameNum = 0;
+
+
 		   string meta_data_file_name = "./" +  radar_dest  + "_meta_data" + ".txt";
-		   
+
 		   string radar_timetag_file_name =   "./" +  radar_dest  + "_time_tag" + ".txt";
 		   string radar_bf_timetag_file_name =  "./" +  radar_bf_dest  + "_time_tag" + ".txt";
 		   string lidar_timetag_file_name =  "./" +  lidar_dest  + "_time_tag" + ".txt";
@@ -305,49 +309,49 @@ int main (int argc, char **argv)
 		   string cam3_timetag_file_name =  "./" +  camera_dest_3 + "_time_tag" + ".txt";
 		   string GPS_timetag_file_name =  "./" +  GPS_dest  + "_time_tag" + ".txt";
 		   string  IMU_timetag_file_name =  "./" +  IMU_dest  + "_time_tag" + ".txt";
-		  
+
 		   cout<<radar_timetag_file_name<<endl;
-		   
-		   ofstream radar_timetag (radar_timetag_file_name); 
-		   ofstream radar_bf_timetag (radar_bf_timetag_file_name); 
-		   
-		   ofstream radar_metadata (meta_data_file_name); 
-		   
-		   ofstream lidar_timetag (lidar_timetag_file_name); 
-		   ofstream cam1_timetag (cam1_timetag_file_name); 
-		   ofstream cam2_timetag (cam2_timetag_file_name); 
-		   ofstream cam3_timetag (cam3_timetag_file_name);    
-		   ofstream IMU_timetag (IMU_timetag_file_name); 
-		   ofstream GPS_timetag (GPS_timetag_file_name); 
-		  
-		   
+
+		   ofstream radar_timetag (radar_timetag_file_name);
+		   ofstream radar_bf_timetag (radar_bf_timetag_file_name);
+
+		   ofstream radar_metadata (meta_data_file_name);
+
+		   ofstream lidar_timetag (lidar_timetag_file_name);
+		   ofstream cam1_timetag (cam1_timetag_file_name);
+		   ofstream cam2_timetag (cam2_timetag_file_name);
+		   ofstream cam3_timetag (cam3_timetag_file_name);
+		   ofstream IMU_timetag (IMU_timetag_file_name);
+		   ofstream GPS_timetag (GPS_timetag_file_name);
+
+
 		   radar_metadata<< "Mode" << " = " <<  detected_mode << endl;
-		   
+
 		   radar_metadata.close();
-		
+
      foreach (rosbag::MessageInstance const m, view)
     {
-					  
+
         if ( std::strcmp( m.getTopic().c_str(), "/radar") == 0)
         {
-			
+
 			  int  radar_ch_cntr = 0;
-			
+
            sensor_msgs::PointCloud::Ptr ptcld = m.instantiate<sensor_msgs::PointCloud>();
-		   
+
 		   string radar_file_name =  radar_dir + "/" + std::to_string(radarFrameNum) + "_.txt";
-		   	  
+
 			 cout<< "Radar Frame: " << radarFrameNum <<endl;
-		   ofstream radar_file (radar_file_name); 
-		   
+		   ofstream radar_file (radar_file_name);
+
 		  // cout<< "Timestamp: " << ptcld->header.stamp <<endl;
 		    radar_timetag <<  radarFrameNum << "," <<ptcld->header.stamp <<endl;
-			
+
 			  radarFrameNum++;
-		   
+
 		   for(int i = 0 ; i < ptcld->points.size(); ++i)
 			{
-			  
+
 			   float xx = ptcld->points[i].x;
 			   float yy = ptcld->points[i].y;
 			   float zz = ptcld->points[i].z;
@@ -408,83 +412,83 @@ int main (int argc, char **argv)
 			   float temp = ptcld->channels[8].values[i];
 			    int FrameId =  ptcld->channels[9].values[i];
 			   int PacketId =  ptcld->channels[10].values[i];
-			   
+
 			   float r = sqrt((xx * xx) + (yy * yy));
 			   float azimuth = 90 + (atan2(yy,xx)* (180 / PI));
 			   float elev = atan2(zz,r);
-			   
+
 			   int pos = radarBF_ch_cntr;
 			   radarBF_ch_cntr += sprintf(radarBF_buffer+pos,"%5u , %5u , %8.4f , %8.4f  , %8.4f , %8.4f , %8.4f  , %8.4f ,%8.4f , %+05.4f  , %5d , %4d , %4d  , %4d , %8d , %8d  , %8.4f \r\n",FrameId,PacketId,xx,yy,zz, r, azimuth, elev,rcs,velocity,rang_indx, thetha_indx,elev_indx,vel_indx,amp_indx,timestamp,temp);
-			   
+
 		       //radar_bf_file<< std::setprecision(5)<<FrameId<<","<<PacketId<<","<<xx<<","<<yy<<","<<zz<<"," << r<< "," << azimuth<< "," << elev<< ","<<rcs<<","<<velocity<<","<<rang_indx<<","<<  thetha_indx<<","<<elev_indx<<","<<vel_indx<<","<<amp_indx<<","<<timestamp<<","<<temp<<endl;
-			 
+
 			}
 			radar_bf_file.write (radarBF_buffer,radarBF_ch_cntr);
 			radar_bf_file.close();
 
-        }  
+        }
         else if ( std::strcmp( m.getTopic().c_str(), "/pandar40p") == 0)
 		{
-			
+
 			int  lidar_ch_cntr = 0;
-			
+
 		   sensor_msgs::PointCloud2::Ptr ptc2ld = m.instantiate<sensor_msgs::PointCloud2>();
-		   
+
 		   string lidar_file_name = lidar_dir + "/" + std::to_string(lidarFrameNum) + "_.txt";
-		   
-		   
+
+
 		   ofstream lidar_file (lidar_file_name);
-		   
+
 		   string bk = "./";
-		     
-		   
+
+
 		   //cout<< "Timestamp: " << ptc2ld->header.stamp <<endl;
 		   
-		    lidar_timetag << lidarFrameNum<< ","<<ptc2ld->header.stamp <<endl;
+		    lidar_timetag << lidarFrameNum<< ","<<m.getTime()<<endl;
 		   
 		   /*  for(int i = 0 ; i < 6; ++i)
 			{
-          
+
 		   cout<< i  << "," <<ptc2ld->fields[i]<<endl;
 			}
 			*/
 			lidarFrameNum++;
-		   
+
 		   for(int i = 0,j=0 ; i < ptc2ld->width; i++,j=j+48)
 			{
-         
+
 		    xf.m_bytes[0] = ptc2ld->data[j];
 			xf.m_bytes[1] = ptc2ld->data[j+1];
 		    xf.m_bytes[2] = ptc2ld->data[j+2];
 		    xf.m_bytes[3] = ptc2ld->data[j+3];
-						
+
 			yf.m_bytes[0] = ptc2ld->data[j+4];
 			yf.m_bytes[1] = ptc2ld->data[j+5];
 		    yf.m_bytes[2] = ptc2ld->data[j+6];
 			yf.m_bytes[3] = ptc2ld->data[j+7];
-			
-			
+
+
 			zf.m_bytes[0] = ptc2ld->data[j+8];
 			zf.m_bytes[1] = ptc2ld->data[j+9];
 		    zf.m_bytes[2] = ptc2ld->data[j+10];
-			zf.m_bytes[3] = ptc2ld->data[j+11];	
-			
+			zf.m_bytes[3] = ptc2ld->data[j+11];
+
 			intensity =  ptc2ld->data[j+16];
-			
-			
+
+
 			tD.m_bytes[0] = ptc2ld->data[j+24];
 		    tD.m_bytes[1] = ptc2ld->data[j+25];
 			tD.m_bytes[2] = ptc2ld->data[j+26];
-		    tD.m_bytes[3] = ptc2ld->data[j+27];	
+		    tD.m_bytes[3] = ptc2ld->data[j+27];
 			tD.m_bytes[4] = ptc2ld->data[j+28];
 			tD.m_bytes[5] = ptc2ld->data[j+29];
 			tD.m_bytes[6] = ptc2ld->data[j+30];
-			tD.m_bytes[7] = ptc2ld->data[j+31];	
-			
+			tD.m_bytes[7] = ptc2ld->data[j+31];
+
 			uRing.m_bytes[0] = ptc2ld->data[j+32];
 			uRing.m_bytes[1] = ptc2ld->data[j+33];
-			
-			
+
+
 			int pos = lidar_ch_cntr;
 			   lidar_ch_cntr += sprintf(lidar_buffer+pos,"%8.4f , %8.4f  , %8.4f , %4u , %8.4f  , %5d \r\n",xf.m_float, yf.m_float, zf.m_float, intensity, tD.m_double, uRing.m_uint16);
 				//lidar_file<<std::setprecision(5)<< xf.m_float<<","<<yf.m_float<<","<<zf.m_float<<","<<std::to_string(intensity)<<"," << tD.m_double<< ","<< uRing.m_uint16<< endl;
@@ -492,14 +496,14 @@ int main (int argc, char **argv)
 			}
 			lidar_file.write (lidar_buffer, lidar_ch_cntr);
 			lidar_file.close();
-			
-		}	
-        else if ( std::strcmp( m.getTopic().c_str(), "/camera/cam_1") == 0)	
+
+		}
+        else if ( std::strcmp( m.getTopic().c_str(), "/camera/cam_1") == 0)
 		{
 				sensor_msgs::Image::ConstPtr l_img = m.instantiate<sensor_msgs::Image>();
-				
+
 				Mat mat (l_img->height , l_img->width, CV_8UC3);
-								
+
 				for (int i = 0; i< mat.rows; ++i)
 				{
 					for (int j = 0; j< mat.cols; ++j)
@@ -765,12 +769,67 @@ bag.close();
 	 cmd = " rm -rf " +  bag_wthExt;
 	 cout<<cmd<<endl;
      system(cmd.c_str());
-	 
-	 
+
+
+	} //for filelist
+
+
+	// string dest_dir = "/run/user/1000/gvfs/afp-volume:host=MassStorage.local,user=Ziran.Wu,volume=MassStorage/ROS/DataCollection/";
+	string dest_dir = "/mnt/y/ROS/DataCollection/";
+	string src_dir = current_path();
+
+	string cmd = " cp -r " + src_dir + " " + dest_dir;
+	cout<<cmd<<endl;
+	system(cmd.c_str());
+	//system("rm *.tar");
+
+	std::size_t found = src_dir.find_last_of("/\\");
+	cout<<src_dir.substr(found+1)<<endl;
+
+	dest_dir = dest_dir + src_dir.substr(found+1);
+	//cout<<dest_dir<<endl;
+
+	//sleep(3);
+
+	// cmd = "cd " + dest_dir;
+	// cout<<cmd<<endl;
+	// system(cmd.c_str());
+
+	string dest_dir_tar = dest_dir + "/" + "*.tar";
+	//cout<<dest_dir_tar<<endl;
+
+	int err2 = glob((dest_dir_tar).c_str(), 0, NULL,  &globbuf);
+  	if(err2 == 0)
+    {
+		for (size_t i = 0; i < globbuf.gl_pathc; i++)
+		{
+		  dest_fileList.push_back(globbuf.gl_pathv[i]);
+		}
+
+      globfree(&globbuf);
+    }
+
+	if(dest_fileList.size() == 0)
+	{
+		std::cout<< " No tar file is found. exit the program."<<std::endl;
+		return 0;
 	}
-	 
-	 
-	 exit(1);
-	
+
+
+	for(auto it = dest_fileList.begin() ; it != dest_fileList.end(); it++)
+	{
+	   string tar_file = (*it);
+	   cout<<tar_file<<endl;
+	   cmd = "tar -xvf " + tar_file + " -C " + dest_dir;
+	   cout<<cmd<<endl;
+	   system(cmd.c_str());
+	}
+
+	cmd = "rm " + dest_dir_tar;
+	cout<<cmd<<endl;
+	system(cmd.c_str());
+
+	exit(1);
+
     return 0;
 }
