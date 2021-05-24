@@ -20,9 +20,9 @@ Radar
 17. 	temp
 
 where:
-  float r = sqrt((x* x) + (y * y));
-  float azimuth = 90 + (atan2(y,x)* (180 / PI));
-  float elev = atan2(z,r);
+  float r = sqrt((x* x) + (y * y)+ (z * z));
+  float azimuth = 90 + (atan2(-y,x)* (180 / PI));
+  float elev = atan2(z,r)* (180 / PI);
 
 
 
